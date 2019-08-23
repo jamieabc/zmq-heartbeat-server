@@ -15,17 +15,18 @@ import (
 )
 
 const (
-	broadcasterZapDomain = "broadcaster"
-	privateKeyFile       = "peer.private"
-	publicKeyFile        = "peer.public"
-	host                 = "127.0.0.1"
-	port                 = "9999"
-	maximumPacketSize    = 5000000 // 5 MB
-	chain                = "testing"
+	broadcasterZapDomain    = "broadcaster"
+	privateKeyFile          = "peer.private"
+	publicKeyFile           = "peer.public"
+	host                    = "127.0.0.1"
+	port                    = "9999"
+	maximumPacketSize       = 5000000 // 5 MB
+	chain                   = "testing"
+	broadcastIntervalSecond = 60 * time.Second
 )
 
 type connection struct {
-	ip net.IP
+	ip   net.IP
 	port uint16
 }
 
@@ -67,17 +68,17 @@ func main() {
 		fmt.Printf("bind socket with error: %s\n", err)
 	}
 
-	timer := time.After(60 * time.Second)
+	timer := time.NewTimer(broadcastIntervalSecond)
 
 	for {
 		select {
-			case <-timer:
-				err = heartbeat(socket4)
-				fmt.Printf("%s send heartbeat\n", time.Now())
-				if nil != err {
-					fmt.Printf("send heartbeat with error: %s\n", err)
-				}
-				timer = time.After(60 * time.Second)
+		case <-timer.C:
+			err = heartbeat(socket4)
+			fmt.Printf("%s send heartbeat\n", time.Now())
+			if nil != err {
+				fmt.Printf("send heartbeat with error: %s\n", err)
+			}
+			timer.Reset(broadcastIntervalSecond)
 		}
 	}
 
@@ -153,8 +154,8 @@ func bind(socketType zmq.Type, zapDomain string, privateKey []byte, publicKey []
 
 	return socket4, nil
 
-	fail:
-		return nil, err
+fail:
+	return nil, err
 }
 
 func newServerSocket(socketType zmq.Type, zapDomain string, privateKey []byte, publicKey []byte) (*zmq.Socket, error) {
